@@ -187,6 +187,12 @@ temizlendiği için yetim kayıt birikmez.
 - **Kayıt uzunluğu repliğin zamanını aşabilir** — ffmpeg `adelay` filtresi başlangıcı kaydırır ancak
   kaydın doğal uzunluğu kırpılmaz; sonraki boşluğa taşan replikler varsa ses çıkmazlığına neden olabilir.
 
+## iPhone / iOS
+
+Uygulama şu haliyle iPhone'da çalışmaz. iOS'ta çalıştırma seçenekleri, kullanılabilecek
+Apple araçları (SpeechAnalyzer, AVFoundation, Core AI) ve YouTube / App Store kuralları
+için bkz. [docs/ios.md](docs/ios.md).
+
 ## Proje yapısı
 
 ```
