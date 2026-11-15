@@ -99,6 +99,11 @@ public struct DuckEnvelope: Sendable, Hashable {
             n = stop
             if hasNext && n >= segEnd { lo += 1 }
         }
+        // Örnek indeksi Int64.max'ta doygun: taşan kalan elemanlar Int64.max değerini alır.
+        if i < count {
+            let g = gain(atSample: Int64.max)
+            for j in i..<count { buffer[j] = g }
+        }
     }
 }
 
