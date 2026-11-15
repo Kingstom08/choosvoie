@@ -14,17 +14,35 @@ jobs:
     defaults:
       run:
         working-directory: ios/ChoosVoieCore
+        shell: bash
     steps:
       - uses: actions/checkout@v4
       - run: swift --version
       - run: swift build --build-tests
-      - run: swift test --parallel
+      - name: swift test
+        run: |
+          set -o pipefail
+          swift test 2>&1 | tee test.log
+      - name: Report failures as annotation
+        if: failure()
+        run: |
+          msg=$(grep -E "error:|failed|Fatal error|Crash" test.log | sed -E 's#^.*/Tests/##' | head -120 | cut -c1-400 | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')
+          echo "::error title=linux test failures::${msg}"
   macos:
     runs-on: macos-latest
     defaults:
       run:
         working-directory: ios/ChoosVoieCore
+        shell: bash
     steps:
       - uses: actions/checkout@v4
       - run: swift --version
-      - run: swift test
+      - name: swift test
+        run: |
+          set -o pipefail
+          swift test 2>&1 | tee test.log
+      - name: Report failures as annotation
+        if: failure()
+        run: |
+          msg=$(grep -E "error:|failed|Fatal error|Crash" test.log | sed -E 's#^.*/Tests/##' | head -120 | cut -c1-400 | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')
+          echo "::error title=macos test failures::${msg}"
