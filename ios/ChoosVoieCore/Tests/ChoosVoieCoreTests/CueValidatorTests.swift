@@ -102,7 +102,9 @@ final class CueValidatorTests: XCTestCase {
     }
 
     func test_V13_endWithinDurationTolerance() {
-        assertSuccess(CueValidator.validate(startSec: 1, endSec: 10.0000005, text: "a", videoDurationSec: 10))
+        let r = CueValidator.validate(startSec: 1, endSec: 10.0000005, text: "a", videoDurationSec: 10)
+        assertSuccess(r)
+        if case .success(let v) = r { XCTAssertEqual(v.endSec, 10.0000005) }
     }
 
     func test_V14_endExceedsDuration() {
@@ -139,5 +141,10 @@ final class CueValidatorTests: XCTestCase {
 
     func test_V21_nonNumericStringIsInvalidNumber() {
         assertError(CueValidator.validate(startText: "abc", endText: "2", text: "a"), .invalidNumber)
+    }
+
+    func test_R7_nulInTextIsInvalidNumber() {
+        assertError(CueValidator.validate(startText: "1\u{0}x", endText: "2", text: "a"), .invalidNumber)
+        assertError(CueValidator.validate(startText: "1", endText: "2\u{0}", text: "a"), .invalidNumber)
     }
 }

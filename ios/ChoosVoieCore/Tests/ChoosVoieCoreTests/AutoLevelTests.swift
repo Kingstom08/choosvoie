@@ -33,4 +33,13 @@ final class AutoLevelTests: XCTestCase {
         XCTAssertEqual(AutoLevel.peakCeilDB, -1)
         XCTAssertEqual(AutoLevel.silenceFloorDB, -45)
     }
+
+    func test_R6_nonFiniteInputs() {
+        XCTAssertEqual(AutoLevel.gain(meanDB: .nan, peakDB: -3), 1.0)
+        XCTAssertEqual(AutoLevel.gain(meanDB: .infinity, peakDB: nil), 1.0)
+        XCTAssertEqual(AutoLevel.gain(meanDB: -30, peakDB: .infinity), 1.0)
+        XCTAssertEqual(AutoLevel.gain(meanDB: -10, peakDB: .infinity), 0.5011872336272722, accuracy: 1e-12)
+        XCTAssertEqual(AutoLevel.gain(meanDB: -30, peakDB: .nan), 3.1622776601683795, accuracy: 1e-12)
+        XCTAssertEqual(AutoLevel.gain(meanDB: -30, peakDB: -.infinity), 3.1622776601683795, accuracy: 1e-12)
+    }
 }

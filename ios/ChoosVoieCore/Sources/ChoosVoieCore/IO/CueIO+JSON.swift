@@ -55,7 +55,44 @@ extension CueIO {
     static func jsonDouble(_ v: Double) -> String {
         // Sonlu olmayan değerler geçerli JSON'da temsil edilemez; 0.0 yazılır.
         guard v.isFinite else { return "0.0" }
-        return "\(v)"
+        let plain = "\(v)"
+        if abs(v) >= 1e16 { return pythonRepr(v, exponent: true) }
+        // Swift, 2^53..1e16 aralığında üstel yazabilir; Python düz yazar.
+        if abs(v) >= 1e15 && plain.contains("e") { return pythonRepr(v, exponent: false) }
+        return plain
+    }
+
+    /// Python repr biçimi: |v| >= 1e16 için "1e+16", "1.8014398509481984e+16".
+    /// Swift description en kısa basamakları verir; yalnızca biçim dönüştürülür.
+    private static func pythonRepr(_ v: Double, exponent: Bool) -> String {
+        let desc = "\(abs(v))"
+        let sign = v < 0 ? "-" : ""
+        var mantissa = desc
+        var exp = 0
+        if let eIdx = desc.firstIndex(where: { $0 == "e" || $0 == "E" }) {
+            mantissa = String(desc[desc.startIndex..<eIdx])
+            exp = Int(desc[desc.index(after: eIdx)...].replacingOccurrences(of: "+", with: "")) ?? 0
+        }
+        var intPart = mantissa
+        var frac = ""
+        if let dot = mantissa.firstIndex(of: ".") {
+            intPart = String(mantissa[mantissa.startIndex..<dot])
+            frac = String(mantissa[mantissa.index(after: dot)...])
+        }
+        var digits = intPart + frac
+        exp += intPart.count - 1
+        while digits.hasPrefix("0") && digits.count > 1 { digits.removeFirst(); exp -= 1 }
+        while digits.hasSuffix("0") && digits.count > 1 { digits.removeLast() }
+        if !exponent {
+            // Yalnızca 1e15 <= |v| < 1e16 (exp == 15) için çağrılır.
+            while digits.count < exp + 1 { digits += "0" }
+            return sign + digits + ".0"
+        }
+        var m = String(digits.prefix(1))
+        if digits.count > 1 { m += "." + digits.dropFirst() }
+        let e = abs(exp)
+        let expStr = (e < 10 ? "0" : "") + String(e)
+        return sign + m + "e" + (exp < 0 ? "-" : "+") + expStr
     }
 
     static func jsonString(_ s: String) -> String {

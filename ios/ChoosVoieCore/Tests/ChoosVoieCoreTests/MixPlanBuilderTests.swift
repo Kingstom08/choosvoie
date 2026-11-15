@@ -152,6 +152,8 @@ final class MixPlanBuilderTests: XCTestCase {
         XCTAssertEqual(r.plan.envelope.gain(atSample: 72000), 0, accuracy: 1e-6)
         XCTAssertEqual(r.plan.limiter, .standard)
         XCTAssertEqual(r.warnings, [])
+        XCTAssertTrue(r.plan.canonicalString.contains("treat=sep;stem=bg.caf;sig=sig;L=0;"),
+                      r.plan.canonicalString)
     }
 
     func test_M12_separatedWithoutStemFallsBackToDuck() throws {
@@ -324,5 +326,31 @@ final class MixPlanBuilderTests: XCTestCase {
         XCTAssertEqual(TakeSettings.pythonParity.duckMode, .mute)
         XCTAssertEqual(Recording(id: 1, takeID: 1, cueID: 1, fileName: "x", volume: 300).gainFactor, 2)
         XCTAssertEqual(LimiterSpec.standard, LimiterSpec(ceiling: 0.85, attackSec: 0.005, releaseSec: 0.050))
+    }
+
+    func test_R1_extremeLatencyAndTrimSaturateWithoutTrap() throws {
+        let cue = Cue(id: 1, videoID: 1, startSec: 0, endSec: 1, text: "bir")
+        let rec = Recording(id: 7, takeID: 1, cueID: 1, fileName: "a.caf",
+                            latencyCompSec: 2e14, trimStartSec: 1e14)
+        let r = try XCTUnwrap(build(input(cues: [cue], recordings: [rec])))
+        let clip = try XCTUnwrap(r.plan.clips.first)
+        XCTAssertEqual(clip.timelineStartSample, 0)
+        XCTAssertEqual(clip.trimStartSamples, Int64(1) << 62)
+    }
+
+    func test_R2_negativeTrimStartIsClampedToZero() throws {
+        let rec = Recording(id: 7, takeID: 1, cueID: 1, fileName: "a.caf", trimStartSec: -0.5, trimEndSec: -1)
+        let r = try XCTUnwrap(build(input(recordings: [rec])))
+        let clip = try XCTUnwrap(r.plan.clips.first)
+        XCTAssertEqual(clip.timelineStartSample, 48000)
+        XCTAssertEqual(clip.trimStartSamples, 0)
+        XCTAssertEqual(clip.trimEndSamples, 0)
+    }
+
+    func test_R4_separatedPlanHashIndependentOfDuckDepth() throws {
+        let stem = StemReference(fileName: "bg.caf", cueSignature: "sig")
+        let a = try XCTUnwrap(build(input(settings: TakeSettings(duckMode: .separated, duckDepth: 0), stem: stem)))
+        let b = try XCTUnwrap(build(input(settings: TakeSettings(duckMode: .separated, duckDepth: 20), stem: stem)))
+        XCTAssertEqual(a.plan.planHash, b.plan.planHash)
     }
 }

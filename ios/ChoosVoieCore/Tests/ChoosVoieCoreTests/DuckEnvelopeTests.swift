@@ -236,4 +236,39 @@ final class DuckEnvelopeTests: XCTestCase {
         XCTAssertEqual(SampleTime.samples(fromSeconds: 1e300, sampleRate: 48_000), Int64(1) << 62)
         XCTAssertEqual(SampleTime.defaultSampleRate, 48_000)
     }
+
+    func test_R3_fillMatchesGainLookupFullBuffer() {
+        let envs: [DuckEnvelope] = [
+            build([r(1, 2)]),
+            build([r(1, 2), r(2.8, 3.5)]),
+            build([r(0.2, 1.0)]),
+            build([r(9.0, 12.0)]),
+        ]
+        for (idx, env) in envs.enumerated() {
+            var buffer = [Float](repeating: -1, count: 480_000)
+            env.fill(into: &buffer, startingAt: 0)
+            for i in 0..<buffer.count where buffer[i] != env.gain(atSample: Int64(i)) {
+                return XCTFail("env \(idx) mismatch at \(i): \(buffer[i]) vs \(env.gain(atSample: Int64(i)))")
+            }
+        }
+    }
+
+    func test_R3_fillStartingBeforeFirstKeyframeAndPastEnd() {
+        let env = build([r(1, 2)])
+        var a = [Float](repeating: -1, count: 30_000)
+        env.fill(into: &a, startingAt: 10_000)
+        for i in 0..<a.count { XCTAssertEqual(a[i], env.gain(atSample: 10_000 + Int64(i)), "i=\(i)") }
+
+        var b = [Float](repeating: -1, count: 20_000)
+        env.fill(into: &b, startingAt: 470_000)
+        for i in 0..<b.count { XCTAssertEqual(b[i], env.gain(atSample: 470_000 + Int64(i)), "i=\(i)") }
+
+        var c = [Float](repeating: -1, count: 100)
+        env.fill(into: &c, startingAt: -50)
+        for i in 0..<c.count { XCTAssertEqual(c[i], env.gain(atSample: -50 + Int64(i)), "i=\(i)") }
+
+        var d = [Float](repeating: -1, count: 10)
+        env.fill(into: &d, startingAt: Int64.max - 5)
+        for i in 0..<d.count { XCTAssertEqual(d[i], 1.0) }
+    }
 }

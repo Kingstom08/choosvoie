@@ -142,4 +142,30 @@ final class CueIOExportTests: XCTestCase {
     func test_F4_hyphensKeptAndNotStripped() {
         XCTAssertEqual(CueIO.exportFileName(title: "-x-", ext: "json"), "-x--replikler.json")
     }
+
+    func test_R9_fileNameFollowsPythonWordSemantics() {
+        XCTAssertEqual(CueIO.exportFileName(title: "Bölüm ½", ext: "json"), "Bölüm_½-replikler.json")
+        XCTAssertEqual(CueIO.exportFileName(title: "Bo\u{308}lu\u{308}m", ext: "json"), "Bo_lu_m-replikler.json")
+    }
+
+    func test_R10_jsonDoubleMatchesPythonRepr() {
+        func rendered(_ v: Double) -> String {
+            let cue = Cue(id: 1, videoID: 1, startSec: v, endSec: v, text: "a")
+            let out = CueIO.exportJSON(videoTitle: "t", cues: [cue], exportedAt: exportedAt,
+                                       timeZone: TimeZone(secondsFromGMT: 0)!)
+            let line = out.split(separator: "\n").first { $0.contains("\"start_sec\"") }!
+            return String(line.dropFirst("      \"start_sec\": ".count).dropLast())
+        }
+        XCTAssertEqual(rendered(1e-05), "1e-05")
+        XCTAssertEqual(rendered(0.0001), "0.0001")
+        XCTAssertEqual(rendered(-0.0), "-0.0")
+        XCTAssertEqual(rendered(0.1 + 0.2), "0.30000000000000004")
+        XCTAssertEqual(rendered(1e16), "1e+16")
+        XCTAssertEqual(rendered(1e15), "1000000000000000.0")
+        XCTAssertEqual(rendered(18014398509481984.0), "1.8014398509481984e+16")
+        XCTAssertEqual(rendered(9.5e15), "9500000000000000.0")
+        XCTAssertEqual(rendered(1.5e300), "1.5e+300")
+        XCTAssertEqual(rendered(-2.5e20), "-2.5e+20")
+        XCTAssertEqual(rendered(.nan), "0.0")
+    }
 }

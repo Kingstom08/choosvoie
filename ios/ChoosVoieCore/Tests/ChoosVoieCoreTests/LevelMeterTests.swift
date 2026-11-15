@@ -112,4 +112,12 @@ final class LevelMeterTests: XCTestCase {
         XCTAssertNil(TrimDetector.detect(samples: z(48000), sampleRate: sr))
         XCTAssertNil(TrimDetector.detect(samples: [], sampleRate: sr))
     }
+
+    func test_R5_nonPositiveSampleRateReturnsNil() {
+        let x = sq(0.5, 9600)
+        XCTAssertNil(LevelMeter.measure(samples: x, sampleRate: 0))
+        XCTAssertNil(LevelMeter.measure(samples: x, sampleRate: -48_000))
+        XCTAssertNil(TrimDetector.detect(samples: x, sampleRate: 0))
+        XCTAssertNil(TrimDetector.detect(samples: x, sampleRate: -1))
+    }
 }

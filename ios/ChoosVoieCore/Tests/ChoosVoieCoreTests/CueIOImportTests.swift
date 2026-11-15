@@ -244,4 +244,8 @@ final class CueIOImportTests: XCTestCase {
         guard let p = assertOK(plan(#"{"cues":[{"start_sec":1,"end_sec":999,"text":"a"}]}"#)) else { return }
         assertDrafts(p.cues, [d(1, 999, "a")])
     }
+
+    func test_R8_unicodeDecimalDigitIndexLineIsSkipped() {
+        assertDrafts(CueIO.parseSRT("\u{661}\n00:00:01,000 --> 00:00:02,000\nA"), [d(1.0, 2.0, "A")])
+    }
 }

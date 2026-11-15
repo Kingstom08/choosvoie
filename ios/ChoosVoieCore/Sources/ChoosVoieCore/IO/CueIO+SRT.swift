@@ -22,7 +22,7 @@ extension CueIO {
         for block in blocks {
             let lines = PythonText.splitLines(block).filter { !PythonText.strip($0).isEmpty }
             if lines.isEmpty { continue }
-            let idx = isAllASCIIDigits(PythonText.strip(lines[0])) ? 1 : 0
+            let idx = isAllDecimalDigits(PythonText.strip(lines[0])) ? 1 : 0
             if idx >= lines.count { continue }
 
             let line = NSString(string: lines[idx])
@@ -39,10 +39,10 @@ extension CueIO {
         return result
     }
 
-    private static func isAllASCIIDigits(_ s: String) -> Bool {
+    private static func isAllDecimalDigits(_ s: String) -> Bool {
         let scalars = s.unicodeScalars
         if scalars.isEmpty { return false }
-        return scalars.allSatisfy { $0.value >= 0x30 && $0.value <= 0x39 }
+        return scalars.allSatisfy { $0.properties.numericType == .decimal }
     }
 
     /// `first` .. `first+3` grupları: h, m, s, ms.

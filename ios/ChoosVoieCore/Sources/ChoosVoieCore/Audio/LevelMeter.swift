@@ -43,6 +43,7 @@ public enum LevelMeter {
     public static let minSilenceSec: Double = 0.2
 
     public static func measure(samples: [Float], sampleRate: Int) -> LevelMeasurement? {
+        guard sampleRate > 0 else { return nil }
         let wins = LevelWindowing.windows(samples: samples, sampleRate: sampleRate)
         let minSilence = Int(SampleTime.samples(fromSeconds: minSilenceSec, sampleRate: sampleRate))
 
@@ -89,6 +90,7 @@ public struct TrimResult: Sendable, Hashable {
 
 public enum TrimDetector {
     public static func detect(samples: [Float], sampleRate: Int) -> TrimResult? {
+        guard sampleRate > 0 else { return nil }
         let wins = LevelWindowing.windows(samples: samples, sampleRate: sampleRate)
         guard let firstLoud = wins.firstIndex(where: { !$0.isSilent }),
               let lastLoud = wins.lastIndex(where: { !$0.isSilent }) else { return nil }

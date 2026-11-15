@@ -86,14 +86,19 @@ public enum CueIO {
     }
 
     public static func exportFileName(title: String, ext: String) -> String {
-        var replaced = title
-        if let re = try? NSRegularExpression(pattern: "[^\\w\\-]+") {
-            let ns = NSString(string: title)
-            replaced = re.stringByReplacingMatches(
-                in: title, options: [],
-                range: NSRange(location: 0, length: ns.length),
-                withTemplate: "_")
+        // Python `re.sub(r"[^\w\-]+", "_", title)`: \w = isalnum() veya "_".
+        var out = String.UnicodeScalarView()
+        var inRun = false
+        for u in title.unicodeScalars {
+            if isPythonWordScalar(u) || u == "-" {
+                out.append(u)
+                inRun = false
+            } else if !inRun {
+                out.append("_")
+                inRun = true
+            }
         }
+        let replaced = String(out)
         var scalars = Array(replaced.unicodeScalars)
         while let f = scalars.first, f == "_" { scalars.removeFirst() }
         while let l = scalars.last, l == "_" { scalars.removeLast() }
@@ -104,6 +109,17 @@ public enum CueIO {
     }
 
     // MARK: Helpers
+
+    private static func isPythonWordScalar(_ u: Unicode.Scalar) -> Bool {
+        if u == "_" { return true }
+        if u.properties.numericType != nil { return true }
+        switch u.properties.generalCategory {
+        case .uppercaseLetter, .lowercaseLetter, .titlecaseLetter, .modifierLetter, .otherLetter:
+            return true
+        default:
+            return false
+        }
+    }
 
     static func sortedByStart(_ cues: [Cue]) -> [Cue] {
         cues.enumerated().sorted { a, b in

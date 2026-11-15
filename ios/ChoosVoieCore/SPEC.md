@@ -562,9 +562,9 @@ public enum MixPlanBuilder {
 3. `recs` boş → `noRecordings`.
 4. Girdi sırasıyla (sıralamadan önce) her kaydın cue'su: start ya da end sonlu değil veya > 86400 ise ilk ihlalde `invalidCueTime(startSec:)`.
 5. Kayıtlar `(cue.startSec, recording.id)` sırasına dizilir.
-6. Treatment: `.mute` → `.hardMute`; `.duck` → `.duck(settings.duckSettings)`; `.separated` → `stem != nil && hasAudio` ise `.separated(stem, crossfade: duckSettings)`, değilse `.duck(duckSettings)` + `separatedUnavailableUsedDuck`.
+6. Treatment: `.mute` → `.hardMute`; `.duck` → `.duck(settings.duckSettings)`; `.separated` → `stem != nil && hasAudio` ise `.separated(stem, crossfade: duckSettings (level 0'a ayarlı; planHash duckDepth'ten bağımsız))`, değilse `.duck(duckSettings)` + `separatedUnavailableUsedDuck`.
 7. Zarf ayarı: hardMute → `DuckSettings.hardMute`; duck(s) → `s`; separated(_, s) → `s` ama level 0. Pencereler: hardMute ya da kapsam `.recordedCues` → kayıtlı cue'ların aralıkları (benzersiz); `.allCues` → tüm `cues` aralıkları. `DuckEnvelopeBuilder.build(...)`.
-8. Her klip: `g = dubMasterGain × gainFactor × (autoLevel ? AutoLevel.gain(meanDB, peakDB) : 1)` (Double). Sonlu olmayan offset/latency/trim = 0. `start = samples(cue.startSec + offsetSec - latencyCompSec + trimStartSec)` (soldan sağa Double toplama). `trimS = samples(trimStartSec)`, `trimE = samples(trimEndSec)` (negatifse 0). `start < 0` ise `trimS += -start`, `start = 0`.
+8. Her klip: `g = dubMasterGain × gainFactor × (autoLevel ? AutoLevel.gain(meanDB, peakDB) : 1)` (Double). Sonlu olmayan offset/latency/trim = 0; `trimStartSec`/`trimEndSec` bir kez `max(0, sonlu-ya-da-0)` ile kırpılır ve hem start hem trimS/trimE hesabında bu değer kullanılır (klibi kaydırmak için `offsetSec`). `start = samples(cue.startSec + offsetSec - latencyCompSec + trimStartSec)` (soldan sağa Double toplama). `trimS = samples(trimStartSec)`, `trimE = samples(trimEndSec)`. `start < 0` ise `trimS += -start` (doygun toplama, ±2^62'ye kırpılır; taşma tuzağı yok), `start = 0`. Trim ve start değerleri plan `sampleRate` cinsindendir; renderer kayıtları trim uygulamadan önce `plan.sampleRate`'e yeniden örneklemelidir.
 9. `maxGain = max(1.0, bedGain, tüm g)`. Limiter `.standard`: `maxGain > 1 + 1e-6` VEYA treatment `.duck(s)` ve `s.level > 0` VEYA treatment `.separated`. Aksi `nil`.
 10. `bedGain = Float(settings.bedGain)`, `durationSamples = samples(videoDurationSec)`, `hasBedAudio = hasAudio`.
 
@@ -641,6 +641,9 @@ public protocol EntitlementProvider: Sendable { func currentTier() async -> Tier
 | D-12 | srtTimestamp sonlu değilse `00:00:00,000` | Python fırlatır |
 | D-13 | Limiter koşulu genişledi | §5 |
 | D-14 | hardMute kapsamı her zaman recorded | Python paritesi (2684) |
+| D-15 | AutoLevel: sonlu olmayan ortalama → 1.0; tepe +inf → artış yok (`min(gDB, 0)`); tepe NaN/-inf yok sayılır | Python'da tanımsız/uç durum |
+| D-16 | JSON dışa aktarmada sonlu olmayan double `0.0` yazılır; \|v\| ≥ 1e16 Python repr üstel biçimiyle yazılır (`1e+16`) | geçerli JSON; Python repr paritesi |
+| D-17 | MixPlanBuilder `invalidCueTime`'ı girdi sırasında raporlar (Python start sırasında) | yalnız hangi cue'nun raporlandığı değişir |
 
 ## 7. Altın test seti
 
@@ -964,7 +967,15 @@ jobs:
       - uses: actions/checkout@v4
       - run: swift --version
       - run: swift build --build-tests
-      - run: swift test --parallel
+      - name: swift test
+        run: |
+          set -o pipefail
+          swift test 2>&1 | tee test.log
+      - name: Report failures as annotation
+        if: failure()
+        run: |
+          msg=$(grep -E "error:|failed|Fatal error|Crash" test.log | sed -E 's#^.*/Tests/##' | head -120 | cut -c1-400 | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')
+          echo "::error title=linux test failures::${msg}"
   macos:
     runs-on: macos-latest
     defaults:

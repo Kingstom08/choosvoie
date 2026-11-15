@@ -48,8 +48,56 @@ public struct DuckEnvelope: Sendable, Hashable {
     }
 
     public func fill(into buffer: inout [Float], startingAt startSample: Int64) {
-        for i in 0..<buffer.count {
-            buffer[i] = gain(atSample: startSample + Int64(i))
+        let count = buffer.count
+        if count == 0 { return }
+        guard let first = keyframes.first else {
+            for i in 0..<count { buffer[i] = 1.0 }
+            return
+        }
+        // Arabellek sonu (hariç) Int64 taşmasına karşı doygun hesaplanır.
+        let (endSum, overflow) = startSample.addingReportingOverflow(Int64(count))
+        let end: Int64 = overflow ? Int64.max : endSum
+
+        var i = 0
+        var n = startSample
+        // İlk keyframe öncesi: 1.0
+        if n < first.sample {
+            let stop = min(end, first.sample)
+            let len = Int(stop - n)
+            for j in 0..<len { buffer[i + j] = 1.0 }
+            i += len
+            n = stop
+        }
+        if i >= count { return }
+
+        // n >= first.sample: başlangıç keyframe'ini bir kez ikili aramayla bul.
+        var lo = 0
+        var hi = keyframes.count - 1
+        while lo < hi {
+            let mid = (lo + hi + 1) / 2
+            if keyframes[mid].sample <= n { lo = mid } else { hi = mid - 1 }
+        }
+
+        while i < count {
+            let k = keyframes[lo]
+            let hasNext = lo + 1 < keyframes.count
+            let segEnd: Int64 = hasNext ? keyframes[lo + 1].sample : Int64.max
+            let stop = min(end, segEnd)
+            if stop <= n {
+                // Aynı örnekte yinelenen keyframe: sonrakine geç.
+                if hasNext { lo += 1; continue }
+                break
+            }
+            let len = Int(stop - n)
+            if !hasNext || k.curveToNext == nil || segEnd <= k.sample {
+                let g = k.gain
+                for j in 0..<len { buffer[i + j] = g }
+            } else {
+                for j in 0..<len { buffer[i + j] = gain(atSample: n + Int64(j)) }
+            }
+            i += len
+            n = stop
+            if hasNext && n >= segEnd { lo += 1 }
         }
     }
 }

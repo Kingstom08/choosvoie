@@ -45,7 +45,9 @@ public enum MixPlanBuilder {
             treatment = .duck(duck)
         case .separated:
             if let stem = input.stem, input.hasAudio {
-                treatment = .separated(stem, crossfade: duck)
+                treatment = .separated(stem, crossfade: DuckSettings(
+                    level: 0, fadeOutSec: duck.fadeOutSec, fadeInSec: duck.fadeInSec,
+                    curve: duck.curve, scope: duck.scope, minRecoverSec: duck.minRecoverSec))
             } else {
                 treatment = .duck(duck)
                 warnings.append(.separatedUnavailableUsedDuck)
@@ -91,14 +93,15 @@ public enum MixPlanBuilder {
 
             let offset = finiteOrZero(r.offsetSec)
             let latency = finiteOrZero(r.latencyCompSec)
-            let trimStart = finiteOrZero(r.trimStartSec)
-            let trimEnd = finiteOrZero(r.trimEndSec)
+            let trimStart = max(0, finiteOrZero(r.trimStartSec))
+            let trimEnd = max(0, finiteOrZero(r.trimEndSec))
 
             var start = SampleTime.samples(fromSeconds: cue.startSec + offset - latency + trimStart, sampleRate: sr)
             var trimS = max(0, SampleTime.samples(fromSeconds: trimStart, sampleRate: sr))
             let trimE = max(0, SampleTime.samples(fromSeconds: trimEnd, sampleRate: sr))
             if start < 0 {
-                trimS += -start
+                let (sum, overflow) = trimS.addingReportingOverflow(-start)
+                trimS = min(overflow ? (1 << 62) : sum, 1 << 62)
                 start = 0
             }
             clips.append(MixClip(recordingID: r.id, cueID: r.cueID, fileName: r.fileName,

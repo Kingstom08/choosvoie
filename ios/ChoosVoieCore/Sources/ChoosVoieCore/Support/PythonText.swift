@@ -59,6 +59,7 @@ enum PythonText {
     static func parseFloat(_ text: String) -> Double? {
         let t = strip(text)
         if t.isEmpty { return nil }
+        if t.unicodeScalars.contains(where: { $0.value == 0 }) { return nil }
         if t.contains("x") || t.contains("X") { return nil }
         return Double(t)
     }
