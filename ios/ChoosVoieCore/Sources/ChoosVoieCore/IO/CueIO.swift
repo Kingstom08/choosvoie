@@ -61,7 +61,7 @@ public enum CueIO {
 
     public static func exportSRT(cues: [Cue]) -> String {
         var lines: [String] = []
-        for (i, c) in cues.enumerated() {
+        for (i, c) in sortedByStart(cues).enumerated() {
             lines.append(String(i + 1))
             lines.append("\(srtTimestamp(c.startSec)) --> \(srtTimestamp(c.endSec))")
             lines.append(c.text)

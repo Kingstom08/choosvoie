@@ -369,13 +369,13 @@ public enum CueIO {
                                   exportedAt: Date, timeZone: TimeZone) -> String
     /// "yyyy-MM-dd'T'HH:mm:ss" (Gregoryen, saniye kesilir, saat dilimi eki yok)
     public static func exportedAtString(_ date: Date, timeZone: TimeZone) -> String
-    /// app.py:936-942. Bloklar "\n" ile birleşir; boş liste ""; metin olduğu gibi.
+    /// app.py:936-942. Cue'lar startSec'e göre stabil sıralanır (1..n numaralı). Bloklar "\n" ile birleşir; boş liste ""; metin olduğu gibi.
     public static func exportSRT(cues: [Cue]) -> String
     /// app.py:884-889. ms = max(0, (s*1000).rounded(.toNearestOrEven)); sonlu değilse "00:00:00,000" (D-12)
     public static func srtTimestamp(_ seconds: Double) -> String
     /// app.py:879-881: [^\w\-]+ → "_", baştaki/sondaki "_" kırpılır, boşsa "video"; "\(t)-replikler.\(ext)"
     public static func exportFileName(title: String, ext: String) -> String
-    /// app.py:951-972. Ham çıktı: zamanlar doğrulanmamış, metin boş değil.
+    /// app.py:951-972. Ham çıktı: zamanlar doğrulanmamış, metin boş değil. Yalnız boşluktan oluşan satırlar (app.py:957 `if ln.strip() != ""`) indeks/zaman aranmadan önce atılır.
     public static func parseSRT(_ text: String) -> [CueDraft]
     /// Sıra: boyut > 1_048_576 → fileTooLarge; UTF-8 (BOM atılır) geçersiz → notUTF8;
     /// geçerli JSON ama nesne değil ya da "cues" dizi değil → jsonMissingCuesList;
