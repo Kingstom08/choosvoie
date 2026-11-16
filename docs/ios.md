@@ -9,6 +9,8 @@ bir planlama belgesidir.
 > üçüncü taraf kaynaklardan gelir ve geliştirmeye başlamadan önce Apple'ın kendi
 > dokümanlarından kontrol edilmelidir.
 
+> Ayrıntılı Swift mimarisi, API alternatifleri ve yol haritası: [ios-swift-mimari.md](ios-swift-mimari.md)
+
 ## 1. Mevcut uygulama iPhone'da olduğu gibi çalışır mı?
 
 **Hayır.** Sorun donanım değil, uygulamanın yapısı:
@@ -72,6 +74,8 @@ Siri ve dikte özelliğinin kullandığı yeni Apple konuşma tanıma motoru.
 - **Önerilen yol:** Demucs benzeri bir modeli cihaza çevirmek. iOS 27 ile gelen **Core AI**
   PyTorch modellerini Apple silikona çevirecek araçlarla geliyor; Core ML de
   desteklenmeye devam ediyor.
+- **Normal katman (MVP) ayırma yapmaz:** bunun yerine fade'li ducking kullanır; bkz.
+  [Arka plan sesi: ducking modu](ios-swift-mimari.md#5-arka-plan-sesi-ducking-modu).
 
 ### 3.3 Montaj — AVFoundation
 
@@ -119,6 +123,9 @@ Uygulama Xcode ile kişinin kendi iPhone'una yüklenirse App Store incelemesine 
 hesabıyla bir yıl geçerlidir. YouTube Kullanım Şartları yine geçerlidir.
 
 ## 5. Önerilen ilk adımlar
+
+Güncel ilk adım: `SpeechTranscriber` ile İngilizce + ducking dinleme testi (S0.1, S0.7;
+bkz. [yol haritası](ios-swift-mimari.md#12-yol-haritası)).
 
 1. **Deneme uygulaması:** SpeechAnalyzer bir videodan Türkçe replikleri zaman
    damgalarıyla çıkarabiliyor mu? (Türkçe desteği + zaman doğruluğu.)
