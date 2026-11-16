@@ -535,7 +535,7 @@ hash'i bunu kapsar ve ducking parametrelerini de içerir.
   üretilir.
 - **Ayırma imzası v2 (Pro):** Python imzası `sha256(json.dumps(sorted[(round(s,3), round(e,3))]))`,
   metin dahil değil (`app.py:2153-2157`). Swift'te `sha256("s_ms-e_ms;" sıralı tamsayı ms)`
-  (CryptoKit), `bg_sig_version=2` — Swift `JSONEncoder` ondalık gösterimi farklı olabilir;
+  (çekirdekte platformdan bağımsız `PortableSHA256`; CryptoKit çekirdekte yasak, yalnız uygulama katmanında istenirse kullanılabilir), `bg_sig_version=2` — Swift `JSONEncoder` ondalık gösterimi farklı olabilir;
   imza dışarı çıkmadığı için byte uyumu gerekmez.
 - Masaüstü DB/take/kayıt taşıma kapsam dışı (Q3); istenirse GRDB ile `choosvoie.db` salt
   okunur açılabilir.
@@ -792,7 +792,7 @@ Varsayımlar belirtilen yönde ilerlenir; cevaplar kararı değiştirebilir.
 | Q11 | Pro fiyat modeli abonelik mi, dakika kredisi mi? | Abonelik; kredi alternatifi Doğrulanmadı |
 | Q12 | Arayüz dili TR / EN / ikisi? | Bugün TR; STT dilinden bağımsız |
 
-Karara bağlananlar: minimum iOS sürümü 26 (SpeechAnalyzer [V6], Foundation Models [A6]);
+Karara bağlananlar: minimum iOS sürümü 26 (SpeechAnalyzer [V6], Foundation Models [A6]); bu uygulama dağıtım hedefidir, `ChoosVoieCore` Swift paketinin platform tabanı ise `.iOS(.v17)` kalır (tools-version 6.0, Linux CI uyumu; bkz. `ios/ChoosVoieCore/SPEC.md` §1);
 Normal'de Light ayırma yok; Türkçe motor karşılaştırması Faz 2'ye taşındı (S0.1-tr).
 
 **Doğrulanmadı listesi (Faz 0'da kapatılacaklar):**

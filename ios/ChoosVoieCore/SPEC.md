@@ -1,6 +1,6 @@
 # ChoosVoieCore — Uygulama Sözleşmesi (ADR-003)
 
-Platformdan bağımsız saf Swift çekirdeği. Windows, Linux ve macOS'ta `swift test` ile çalışır.
+Platformdan bağımsız saf Swift çekirdeği. Geliştirme artık macOS'ta yapılır; Linux CI (swift:6.0 container) taşınabilirliği korur. `swift test` her iki platformda çalışır.
 Referans davranış: `app.py` (Python). Tasarım: `docs/ios-swift-mimari.md` §5, §6, §8–§10, §14.
 
 **Paralel çalışma sözleşmesi:** Uygulama mühendisi yalnız `Sources/`, QA mühendisi yalnız `Tests/` altına yazar.
@@ -8,12 +8,12 @@ Ortak sözleşme bu belgedeki imzalar ve altın test değerleridir. İmza deği�
 
 ## 1. Kısıtlar
 
-- Yalnız `Foundation` (Linux/Windows'ta swift-corelibs-foundation). **Yasak:** Accelerate, AVFoundation, CryptoKit, Combine, SwiftUI, os/os.Logger, Glibc/Darwin importu. `cos`, `log10`, `pow` Foundation'dan gelir.
+- Yalnız `Foundation` (Linux'ta swift-corelibs-foundation). **Yasak:** Accelerate, AVFoundation, CryptoKit, Combine, SwiftUI, os/os.Logger, Glibc/Darwin importu. `cos`, `log10`, `pow` Foundation'dan gelir.
 - Global değişken durum yok. Değer tipleri, `Sendable`.
-- Test çerçevesi **XCTest** (swift-testing'in Windows desteği bilinmiyor).
+- Test çerçevesi **XCTest** (süreklilik için korunur; başlangıçtaki "swift-testing'in Windows desteği bilinmiyor" gerekçesi Mac'e geçilmesiyle geçersizdir).
 - Kaynak (resource) dosyası yok; test fikstürleri satır içi string literal.
 - Kimlikler `Int64` (SQLite INTEGER PRIMARY KEY uyumu). Dosya adları yol değil, `<uuid>.caf` gibi ad.
-- Platform alt sınırı `.iOS(.v17)`, `.macOS(.v14)`.
+- Platform alt sınırı `.iOS(.v17)`, `.macOS(.v14)`. Bu yalnız paket tabanıdır (tools-version 6.0, Linux CI uyumu); uygulamanın dağıtım hedefi iOS 26'dır (`docs/ios-swift-mimari.md` §13 (Karara bağlananlar)). Paket 17+ tabanını korur.
 
 ## 2. Package.swift (birebir)
 
@@ -946,53 +946,18 @@ M3 son satırı: `lim=3f59999a;3f747ae147ae147b;3fa999999999999a`.
 
 ## 8. CI — `.github/workflows/ios-core.yml`
 
-```yaml
-name: ios-core
-on:
-  push:
-    paths: ["ios/**", ".github/workflows/ios-core.yml"]
-  pull_request:
-    paths: ["ios/**", ".github/workflows/ios-core.yml"]
-concurrency:
-  group: ios-core-${{ github.ref }}
-  cancel-in-progress: true
-jobs:
-  linux:
-    runs-on: ubuntu-latest
-    container: swift:6.0
-    defaults:
-      run:
-        working-directory: ios/ChoosVoieCore
-    steps:
-      - uses: actions/checkout@v4
-      - run: swift --version
-      - run: swift build --build-tests
-      - name: swift test
-        run: |
-          set -o pipefail
-          swift test 2>&1 | tee test.log
-      - name: Report failures as annotation
-        if: failure()
-        run: |
-          msg=$(grep -E "error:|failed|Fatal error|Crash" test.log | sed -E 's#^.*/Tests/##' | head -120 | cut -c1-400 | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')
-          echo "::error title=linux test failures::${msg}"
-  macos:
-    runs-on: macos-latest
-    defaults:
-      run:
-        working-directory: ios/ChoosVoieCore
-    steps:
-      - uses: actions/checkout@v4
-      - run: swift --version
-      - run: swift test
-```
+İş akışı tanımı tek kaynaktan okunur: `.github/workflows/ios-core.yml` (bu belgede kopyası tutulmaz).
+
+- `linux` işi: `swift:6.0` container (ubuntu-latest), `swift build --build-tests` ve `swift test`.
+- `macos` işi: `macos-latest`, `swift test`.
+- İkisi de `ios/ChoosVoieCore` altında çalışır; hata olursa test günlüğü annotation olarak raporlanır.
 
 ## 9. Riskler
 
-- R1: Windows'ta `String(format:)` tie yuvarlaması bilinmiyor; testlerde tie yok.
-- R2: Windows'ta kullanıcı yolunda boşluk ve ASCII dışı karakter var (`C:\Users\Alperen Özkaya\…`); SwiftPM sorun çıkarırsa depoyu `C:\src\choicevoie` gibi bir yola klonla. `git config core.longpaths true`.
+- ~~R1: Windows'ta `String(format:)` tie yuvarlaması bilinmiyor; testlerde tie yok.~~ **Geçersiz (Mac'e geçildi, Windows'a özgü).**
+- ~~R2: Windows'ta kullanıcı yolunda boşluk ve ASCII dışı karakter var (`C:\Users\Alperen Özkaya\…`); SwiftPM sorun çıkarırsa depoyu `C:\src\choicevoie` gibi bir yola klonla. `git config core.longpaths true`.~~ **Geçersiz (Mac'e geçildi, Windows'a özgü).**
 - R3: `JSONDecoder` yinelenen anahtar davranışı bilinmiyor.
-- R4: Windows'ta `TimeZone(identifier:)` ICU'ya bağlı; testlerde yalnız `TimeZone(secondsFromGMT:)`.
+- ~~R4: Windows'ta `TimeZone(identifier:)` ICU'ya bağlı; testlerde yalnız `TimeZone(secondsFromGMT:)`.~~ **Geçersiz (Mac'e geçildi, Windows'a özgü).**
 - R5: CRLF — `.gitattributes` `eol=lf`; CRLF testleri açık `"\r\n"` kaçışıyla.
 
 ## 10. Kapsam dışı (Mac ya da sonraki faz)
